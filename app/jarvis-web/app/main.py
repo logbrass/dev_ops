@@ -16,9 +16,11 @@ VERSION = os.getenv("APP_VERSION", "v0.0.0")
 THEME_COLOR = os.getenv("THEME_COLOR", "#1f6feb")
 THEME_NAME = os.getenv("THEME_NAME", "default")
 
-# When set truthy, /healthz and /readyz return 500 and "/" returns 500 on every
-# Nth request. We use this to ship a deliberately-broken image (v3) and watch
-# Argo Rollouts auto-rollback once Prometheus analysis trips.
+# When set truthy, "/" returns 500 on every Nth request. We use this to ship a
+# deliberately-broken image (v3) and watch Argo Rollouts auto-rollback once
+# Prometheus analysis trips. Liveness/readiness probes intentionally stay green
+# so the pod actually serves the broken traffic — if probes failed, the pod
+# would crashloop and never emit 5xx for the AnalysisRun to see.
 FAIL_MODE = os.getenv("FAIL_MODE", "false").lower() in ("1", "true", "yes")
 FAIL_RATIO = int(os.getenv("FAIL_RATIO", "1"))
 
@@ -67,9 +69,8 @@ def index() -> Response:
 
 @app.get("/healthz")
 def healthz() -> dict:
-    """Liveness probe. Returns 500 when FAIL_MODE is on so K8s/Rollouts notice."""
-    if FAIL_MODE:
-        return Response(status_code=500)
+    """Liveness probe. Always 200 — failures are surfaced through "/" so the
+    AnalysisRun's Prometheus query sees the 5xx ratio."""
     return {"status": "ok", "version": VERSION}
 
 
