@@ -1,0 +1,14 @@
+{{/*
+  Grafana auto-discovers dashboards via the Grafana sidecar; any ConfigMap
+  with the label `grafana_dashboard: "1"` gets picked up. We embed our
+  jarvis-canary dashboard JSON here so it ships with the platform chart.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jarvis-canary-dashboard
+  labels:
+    grafana_dashboard: "1"
+data:
+  jarvis-canary.json: |-
+{{ .Files.Get "files/jarvis-canary.json" | indent 4 }}

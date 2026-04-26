@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Helm
+charts/*/charts/
+charts/*/Chart.lock
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.backup
+infra/terraform/*.tfplan
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local-only scratch dir for vendored sources during dev
+.scratch/

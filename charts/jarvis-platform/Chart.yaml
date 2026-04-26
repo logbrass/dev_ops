@@ -1,0 +1,20 @@
+apiVersion: v2
+name: jarvis-platform
+description: |
+  Umbrella chart wiring together the platform dependencies (Postgres + the
+  kube-prometheus-stack) for Jarvis. The application charts (jarvis-web /
+  jarvis-auth / jarvis-notes) are deployed separately as Argo CD Applications
+  so each can be promoted independently.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+dependencies:
+  - name: postgresql
+    version: "15.5.20"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+  - name: kube-prometheus-stack
+    version: "65.5.1"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    condition: kube-prometheus-stack.enabled

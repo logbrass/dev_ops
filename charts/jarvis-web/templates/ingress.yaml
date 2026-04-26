@@ -1,0 +1,28 @@
+{{- if .Values.ingress.enabled -}}
+{{/*
+  Ingress fronting jarvis-web. Argo Rollouts edits this Ingress in place to
+  split traffic between -stable and -canary services according to the
+  current rollout step's setWeight value.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "jarvis-web.fullname" . }}
+  labels:
+    {{- include "jarvis-web.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "jarvis-web.fullname" . }}-stable
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

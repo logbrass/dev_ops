@@ -1,0 +1,28 @@
+# App-of-Apps: a single Argo CD Application that manages all the others.
+# Apply this once and Argo CD picks up everything in gitops/apps/* and keeps
+# it in sync with this Git repo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jarvis-root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cis1912/dev_ops.git  # update to your fork
+    targetRevision: HEAD
+    path: gitops/apps
+    directory:
+      recurse: true
+      include: '{platform.yaml,jarvis-auth.yaml,jarvis-notes.yaml,jarvis-web.yaml}'
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

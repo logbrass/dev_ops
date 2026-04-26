@@ -1,0 +1,17 @@
+image:
+  repository: ghcr.io/cis1912/jarvis-notes
+  tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+service:
+  port: 8001
+
+env:
+  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql:5432/jarvis"
+  AUTH_SERVICE_URL: "http://release-jarvis-auth:8000"
+  DEBUG: "False"
+
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits:   { cpu: 500m, memory: 512Mi }

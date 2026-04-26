@@ -1,0 +1,9 @@
+apiVersion: v2
+name: jarvis-web
+description: |
+  Canary-target web service. Renders a colored page tied to APP_VERSION.
+  Workload is an Argo Rollouts Rollout (not a Deployment) so we can do
+  progressive delivery with Prometheus-driven analysis.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

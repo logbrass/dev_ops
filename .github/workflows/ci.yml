@@ -1,0 +1,111 @@
+# CI for the Jarvis GitOps repo.
+#
+# What this does on every push / PR:
+#   1. Lint + test jarvis-web (pytest)
+#   2. Lint Helm charts (helm lint, helm template)
+#   3. Build all three jarvis-web image tags (v1/v2/v3-broken) and the two
+#      Jarvis backend images, then push to ghcr.io with both `:<sha>` and
+#      `:<semver>` tags.
+#
+# A separate workflow (promote.yml) handles updating the GitOps values file
+# to actually roll out a new version through the canary pipeline.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  test-web:
+    name: jarvis-web tests
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: app/jarvis-web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: pytest -q
+
+  helm-lint:
+    name: helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with: { version: v3.16.2 }
+      - name: Lint each chart
+        run: |
+          for c in charts/*/; do
+            echo "::group::lint $c"
+            helm lint "$c" || exit 1
+            echo "::endgroup::"
+          done
+      - name: helm template (jarvis-web)
+        run: helm template jarvis-web charts/jarvis-web -f environments/dev/jarvis-web.values.yaml > /dev/null
+
+  build-web:
+    name: build jarvis-web (3 tags)
+    needs: [test-web, helm-lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        # Each entry produces a distinct image tag from the SAME Dockerfile.
+        # Behavior differences between v1/v2/v3 are env-driven at deploy time
+        # (THEME_COLOR / FAIL_MODE), not baked into the image.
+        include:
+          - tag: v1.0.0
+          - tag: v2.0.0
+          - tag: v3.0.0-broken
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: app/jarvis-web
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/jarvis-web:${{ matrix.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/jarvis-web:${{ matrix.tag }}-${{ github.sha }}
+
+  build-backend:
+    name: build ${{ matrix.service }}
+    needs: [helm-lint]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        service: [auth, notes]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: app/jarvis-backend
+          file: app/jarvis-backend/services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/jarvis-${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/jarvis-${{ matrix.service }}:${{ github.sha }}

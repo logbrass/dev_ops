@@ -1,0 +1,28 @@
+# jarvis-web Application. The image tag in environments/dev/jarvis-web.values.yaml
+# is what CI bumps to start a canary rollout. Argo CD detects the change,
+# Argo Rollouts handles the progressive delivery + analysis.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jarvis-web
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/cis1912/dev_ops.git
+    targetRevision: HEAD
+    path: charts/jarvis-web
+    helm:
+      valueFiles:
+        - ../../environments/dev/jarvis-web.values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: jarvis
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

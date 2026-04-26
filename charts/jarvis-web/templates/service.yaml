@@ -1,0 +1,36 @@
+{{/*
+  Two services: stable and canary. Argo Rollouts toggles which pods sit behind
+  each one based on the rollout step. Both target the same selector that gets
+  added/removed automatically by the Rollout controller.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jarvis-web.fullname" . }}-stable
+  labels:
+    {{- include "jarvis-web.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "jarvis-web.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jarvis-web.fullname" . }}-canary
+  labels:
+    {{- include "jarvis-web.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "jarvis-web.selectorLabels" . | nindent 4 }}

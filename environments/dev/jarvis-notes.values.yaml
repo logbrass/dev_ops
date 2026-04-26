@@ -1,0 +1,5 @@
+image:
+  repository: jarvis-notes
+  tag: latest
+  pullPolicy: IfNotPresent
+replicaCount: 1

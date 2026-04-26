@@ -1,0 +1,59 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 38,
+  "tags": ["jarvis", "canary"],
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "5s",
+  "timepicker": {},
+  "title": "Jarvis Canary",
+  "uid": "jarvis-canary",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request rate by app version",
+      "id": 1,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum by (version) (rate(http_requests_total{job=~\".*jarvis-web.*\"}[1m]))",
+          "legendFormat": "{{version}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx rate (across versions)",
+      "id": 2,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{job=~\".*jarvis-web.*\", status=~\"5..\"}[1m])) / sum(rate(http_requests_total{job=~\".*jarvis-web.*\"}[1m]))",
+          "legendFormat": "5xx ratio",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1 }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Pods running per version",
+      "id": 3,
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "count by (label_app_kubernetes_io_version) (kube_pod_labels{label_app_kubernetes_io_name=\"jarvis-web\"})",
+          "legendFormat": "{{label_app_kubernetes_io_version}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

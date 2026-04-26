@@ -1,0 +1,59 @@
+{{/*
+  Argo Rollouts Rollout — replaces a vanilla Deployment so we get canary
+  progressive delivery with Prometheus-driven analysis. The Rollout points at
+  two Services (canary + stable) and an Ingress; Argo Rollouts mutates the
+  Ingress to shift traffic between them according to the steps in values.yaml.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: {{ include "jarvis-web.fullname" . }}
+  labels:
+    {{- include "jarvis-web.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      {{- include "jarvis-web.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "jarvis-web.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/version: {{ .Values.image.tag | quote }}
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: {{ .Values.image.tag | quote }}
+            - name: THEME_COLOR
+              value: {{ .Values.theme.color | quote }}
+            - name: THEME_NAME
+              value: {{ .Values.theme.name | quote }}
+            - name: FAIL_MODE
+              value: {{ .Values.failMode | quote }}
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+  strategy:
+    canary:
+      canaryService: {{ include "jarvis-web.fullname" . }}-canary
+      stableService: {{ include "jarvis-web.fullname" . }}-stable
+      trafficRouting:
+        nginx:
+          stableIngress: {{ include "jarvis-web.fullname" . }}
+      steps:
+        {{- toYaml .Values.rollout.steps | nindent 8 }}

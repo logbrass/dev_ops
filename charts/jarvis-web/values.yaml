@@ -1,0 +1,58 @@
+# Default values for jarvis-web. Overridden per-environment in
+# environments/<env>/values.yaml. CI bumps `image.tag` and `theme.*` to roll
+# out a new color/version through the canary pipeline.
+
+image:
+  repository: ghcr.io/cis1912/jarvis-web
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+replicaCount: 5  # 5 keeps the 20% canary step round (1/5 of pods get the new version)
+
+theme:
+  color: "#1f6feb"
+  name: blue
+
+failMode: false  # set to true on the v3-broken release to trigger auto-rollback
+
+service:
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: jarvis-web.local
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+# Argo Rollouts canary strategy. Steps are intentionally short for a live demo;
+# bump `pause.duration` to something realistic (5-10m) for a real prod rollout.
+rollout:
+  enabled: true
+  steps:
+    - setWeight: 20
+    - pause: { duration: 30s }
+    - analysis:
+        templates:
+          - templateName: success-rate
+    - setWeight: 50
+    - pause: { duration: 30s }
+    - analysis:
+        templates:
+          - templateName: success-rate
+    - setWeight: 80
+    - pause: { duration: 30s }
+
+# Tells Prometheus Operator to scrape /metrics. The AnalysisTemplate then
+# queries those metrics to gate canary promotion.
+serviceMonitor:
+  enabled: true
+  interval: 15s

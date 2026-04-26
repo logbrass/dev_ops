@@ -1,0 +1,22 @@
+{{- if .Values.serviceMonitor.enabled -}}
+{{/*
+  Tells the Prometheus Operator (kube-prometheus-stack) to scrape /metrics on
+  every jarvis-web pod. The metrics carry a `version` label so the
+  AnalysisTemplate can compare canary vs stable in PromQL.
+*/}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "jarvis-web.fullname" . }}
+  labels:
+    {{- include "jarvis-web.labels" . | nindent 4 }}
+    release: kube-prometheus-stack  # required label for our Prometheus selector
+spec:
+  selector:
+    matchLabels:
+      {{- include "jarvis-web.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.serviceMonitor.interval }}
+{{- end }}

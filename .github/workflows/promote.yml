@@ -1,0 +1,69 @@
+# promote.yml — manually-triggered "promote a build" workflow.
+#
+# Inputs let an operator pick a service + tag + theme. The workflow opens a
+# PR (or commits directly to main) that bumps the corresponding values file
+# in environments/dev/. Once merged, Argo CD detects the change and Argo
+# Rollouts kicks off the canary.
+#
+# This is the GitOps equivalent of `kubectl set image` — the desired state
+# always lives in git, never in someone's terminal history.
+
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Service to promote"
+        type: choice
+        options: [jarvis-web, jarvis-auth, jarvis-notes]
+        required: true
+      tag:
+        description: "Image tag to deploy (e.g. v2.0.0)"
+        type: string
+        required: true
+      theme_color:
+        description: "(jarvis-web only) hex color for THEME_COLOR"
+        type: string
+        required: false
+      theme_name:
+        description: "(jarvis-web only) human label, e.g. orange"
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump values file
+        run: |
+          set -euo pipefail
+          FILE="environments/dev/${{ inputs.service }}.values.yaml"
+          # Tag is always present; theme fields only for jarvis-web.
+          yq -i ".image.tag = \"${{ inputs.tag }}\"" "$FILE"
+          if [[ "${{ inputs.service }}" == "jarvis-web" && -n "${{ inputs.theme_color }}" ]]; then
+            yq -i ".theme.color = \"${{ inputs.theme_color }}\"" "$FILE"
+          fi
+          if [[ "${{ inputs.service }}" == "jarvis-web" && -n "${{ inputs.theme_name }}" ]]; then
+            yq -i ".theme.name = \"${{ inputs.theme_name }}\"" "$FILE"
+          fi
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: promote/${{ inputs.service }}-${{ inputs.tag }}
+          commit-message: "promote ${{ inputs.service }} → ${{ inputs.tag }}"
+          title: "promote ${{ inputs.service }} → ${{ inputs.tag }}"
+          body: |
+            Automated promotion via the `promote` workflow.
+
+            * service: `${{ inputs.service }}`
+            * tag: `${{ inputs.tag }}`
+            * theme_color: `${{ inputs.theme_color }}`
+            * theme_name: `${{ inputs.theme_name }}`
+
+            Merging this PR will trigger Argo CD to sync, after which Argo
+            Rollouts will start the canary rollout to this image tag.

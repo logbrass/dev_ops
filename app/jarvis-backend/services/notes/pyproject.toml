@@ -1,0 +1,17 @@
+[project]
+name = "jarvis-notes-service"
+version = "0.1.0"
+description = "Notes service for Jarvis"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi[standard]>=0.115.13",
+    "sqlalchemy>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "psycopg2-binary>=2.9.0",
+    "httpx>=0.25.0",
+    "shared",
+]
+
+[tool.uv.sources]
+shared = { path = "../../utilities", editable = true }

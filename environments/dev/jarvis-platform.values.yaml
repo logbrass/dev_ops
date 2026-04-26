@@ -1,0 +1,6 @@
+# Platform-level overrides (Postgres + Prometheus + Grafana) for dev.
+# Mostly relies on the chart defaults; tighten resources here for Minikube.
+postgresql:
+  primary:
+    persistence:
+      size: 1Gi

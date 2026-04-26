@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "jarvis-auth.fullname" . }}
+  labels: {{- include "jarvis-auth.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: 8000
+      protocol: TCP
+      name: http
+  selector: {{- include "jarvis-auth.selectorLabels" . | nindent 4 }}

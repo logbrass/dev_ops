@@ -1,0 +1,19 @@
+# Per-environment overrides for the jarvis-web chart in the `dev` (Minikube)
+# environment. CI's promote.yml workflow edits image.tag and theme.* in this
+# file to roll out a new version through the canary pipeline.
+
+image:
+  repository: jarvis-web
+  tag: v1.0.0
+  pullPolicy: IfNotPresent  # use locally-built images loaded into Minikube
+
+theme:
+  color: "#1f6feb"
+  name: blue
+
+failMode: false
+replicaCount: 5
+
+ingress:
+  enabled: true
+  host: jarvis-web.local

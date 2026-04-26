@@ -1,0 +1,51 @@
+# Tunables for the platform dependencies. We disable expensive defaults so the
+# whole stack fits comfortably in a Minikube node (4 CPU / 6 GB).
+
+postgresql:
+  enabled: true
+  auth:
+    username: jarvis
+    password: password
+    database: jarvis
+  primary:
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+
+kube-prometheus-stack:
+  enabled: true
+  fullnameOverride: kube-prometheus-stack
+  defaultRules:
+    create: false  # the alert library is huge; we ship our own focused rules
+  alertmanager:
+    enabled: false
+  prometheus:
+    prometheusSpec:
+      retention: 1h
+      resources:
+        requests: { cpu: 100m, memory: 256Mi }
+        limits:   { cpu: 1, memory: 1Gi }
+      # Pick up our ServiceMonitors regardless of label selector defaults.
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+  grafana:
+    adminPassword: admin
+    defaultDashboardsEnabled: false
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+  nodeExporter:
+    enabled: false
+  kubeStateMetrics:
+    enabled: true
+  prometheusOperator:
+    resources:
+      requests: { cpu: 50m, memory: 128Mi }
