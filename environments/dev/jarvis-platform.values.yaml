@@ -1,6 +1,13 @@
 # Platform-level overrides (Postgres + Prometheus + Grafana) for dev.
 # Mostly relies on the chart defaults; tighten resources here for Minikube.
+#
+# kube-prometheus-stack is installed directly by scripts/bootstrap.sh into the
+# `monitoring` namespace, so we disable the subchart here to avoid Argo CD
+# fighting Helm over ownership of the same resources.
 postgresql:
   primary:
     persistence:
       size: 1Gi
+
+kube-prometheus-stack:
+  enabled: false

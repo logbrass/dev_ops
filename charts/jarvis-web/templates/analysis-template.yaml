@@ -28,13 +28,13 @@ spec:
           query: |
             sum(rate(
               http_requests_total{
-                job="{{ include "jarvis-web.fullname" . }}",
+                job=~"{{ include "jarvis-web.fullname" . }}-(stable|canary)",
                 status!~"5.."
               }[1m]
             ))
             /
             sum(rate(
               http_requests_total{
-                job="{{ include "jarvis-web.fullname" . }}"
+                job=~"{{ include "jarvis-web.fullname" . }}-(stable|canary)"
               }[1m]
             ))

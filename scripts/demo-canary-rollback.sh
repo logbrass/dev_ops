@@ -33,7 +33,8 @@ if [[ "${GITOPS:-0}" == "1" ]]; then
 else
   helm upgrade --install jarvis-web charts/jarvis-web \
     --namespace jarvis \
-    -f "$VALUES"
+    -f "$VALUES" \
+    --force-conflicts
 fi
 
 echo

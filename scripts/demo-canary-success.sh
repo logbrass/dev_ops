@@ -37,9 +37,13 @@ if [[ "${GITOPS:-0}" == "1" ]]; then
 else
   echo
   echo "Applying directly via Helm..."
+  # --force-conflicts: helm 4 uses server-side apply; argo-rollouts owns the
+  # rollout's live spec.strategy.canary.steps and the stable/canary Service
+  # selectors after the first install, so we have to take ownership back here.
   helm upgrade --install jarvis-web charts/jarvis-web \
     --namespace jarvis \
-    -f "$VALUES"
+    -f "$VALUES" \
+    --force-conflicts
 fi
 
 echo

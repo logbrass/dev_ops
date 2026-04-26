@@ -8,7 +8,7 @@ service:
   port: 8000
 
 env:
-  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql:5432/jarvis"
+  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql.monitoring.svc.cluster.local:5432/jarvis"
   FRONTEND_URL: "http://localhost:3000"
   JWT_SECRET_KEY: "a_super_secret_key_for_jwt"
   JWT_ALGORITHM: "HS256"
