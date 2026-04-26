@@ -8,8 +8,9 @@ service:
   port: 8001
 
 env:
-  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql:5432/jarvis"
-  AUTH_SERVICE_URL: "http://release-jarvis-auth:8000"
+  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql.monitoring.svc.cluster.local:5432/jarvis"
+  AUTH_SERVICE_URL: "http://jarvis-auth-jarvis-auth:8000"
+  FRONTEND_URL: "http://localhost:3000"
   DEBUG: "False"
 
 resources:

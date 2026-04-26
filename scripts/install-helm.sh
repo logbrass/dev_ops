@@ -15,11 +15,13 @@ step() { printf "\n\033[1;36m==> %s\033[0m\n" "$*"; }
 kubectl create namespace jarvis --dry-run=client -o yaml | kubectl apply -f -
 
 step "Installing Postgres (bitnami chart, namespace=jarvis)"
-helm repo add bitnami https://charts.bitnami.com/bitnami >/dev/null 2>&1 || true
-helm repo update >/dev/null
-helm upgrade --install jarvis-postgres bitnami/postgresql \
+# Bitnami migrated their chart index to an OCI registry in 2025 (legacy
+# charts.bitnami.com URL is dead) and moved free images to `bitnamilegacy/*`
+# (`bitnami/*` is now paid secure-images only). Pin both here.
+helm upgrade --install jarvis-postgres oci://registry-1.docker.io/bitnamicharts/postgresql \
   --namespace jarvis \
   --version 15.5.20 \
+  --set image.repository=bitnamilegacy/postgresql \
   --set auth.username=jarvis \
   --set auth.password=password \
   --set auth.database=jarvis \
