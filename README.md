@@ -1,59 +1,159 @@
 # Jarvis GitOps Canary Pipeline
 
-> CIS 1912 (DevOps) — Final Project — Spring 2026
+> CIS 1912 (DevOps) — Final Project — Spring 2026  
 > Steven Chang, Grace Li, Logan Brassington, Sohum Trivedi
 
 A GitOps-driven progressive-delivery pipeline for the Jarvis microservices.
-Two color-themed builds of a small web service are rolled out via **Argo
-Rollouts** with a Prometheus-backed analysis step; if the new version's
-error rate exceeds a threshold, Argo Rollouts **automatically rolls back**.
+A small color-themed web service is rolled out via **Argo Rollouts** with a
+Prometheus-backed analysis step; if the canary's user-facing error rate exceeds
+the threshold, Argo Rollouts **automatically aborts/rolls back traffic** to the
+previous stable ReplicaSet.
 
-The visible demo: refresh `http://jarvis-web.local` during a canary and watch
-the page color flip between blue (stable v1) and orange (canary v2). Push a
-deliberately-broken v3 and watch traffic shift back to v1 without anyone
-touching the cluster.
+There are two demo paths:
+
+- **Local Minikube demo:** scripts and `environments/dev/*.values.yaml` still
+  support the original local workflow at `http://jarvis-web.local`.
+- **AWS GitOps demo:** the current live demoware path is values-driven GitOps on
+  EKS. Commit changes to `environments/aws/jarvis-web.values.yaml`; Argo CD
+  syncs them, and Argo Rollouts performs the canary.
+
+Live AWS app URL:
+
+```text
+http://aa180030810ff47df9c684a09112c3fc-c8482971d4afdc73.elb.us-east-1.amazonaws.com
+```
+
+During a canary, repeated refreshes should show a mix of stable and canary
+colors. That is expected: the rollout sends 20%, then 50%, then 80%, and then
+100% of traffic to the new version if Prometheus analysis passes.
 
 ## What this hits from class
 
 | Class topic | Where it lives |
 | --- | --- |
 | Docker | `app/jarvis-web/Dockerfile`, `app/jarvis-backend/services/*/Dockerfile` |
-| Docker Compose | `compose.yaml` (full local-dev stack with both web variants) |
+| Docker Compose | `compose.yaml` local-dev stack |
 | Kubernetes / Helm | `charts/{jarvis-web,jarvis-auth,jarvis-notes,jarvis-platform}` |
-| Reproducibility / GitOps | `gitops/apps/`, `environments/dev/*.values.yaml` (single source of truth) |
+| Reproducibility / GitOps | `gitops/apps/`, `environments/dev/*.values.yaml`, `environments/aws/*.values.yaml` |
 | Progressive delivery + safe CD | `charts/jarvis-web/templates/rollout.yaml`, `analysis-template.yaml` |
-| CI/CD with GitHub Actions | `.github/workflows/{ci,promote}.yml` |
+| CI/CD with GitHub Actions | `.github/workflows/{ci,promote}.yml` — currently focused on GHCR/dev; AWS demo uses manual values commits |
 | Observability | kube-prometheus-stack + `monitoring/dashboards/jarvis-canary.json` |
-| Infrastructure as Code | `infra/terraform/` (EKS + ECR + VPC) |
+| Infrastructure as Code | `infra/terraform/` — EKS + ECR + VPC |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    Dev[Developer push] --> GHA[GitHub Actions ci.yml]
-    GHA -->|build/push| GHCR[ghcr.io/cis1912/*]
-    Promote[promote.yml workflow] -->|bump image.tag| Repo[environments/dev/*.values.yaml]
-    Repo --> ArgoCD[Argo CD]
-    ArgoCD -->|sync helm charts| Cluster[Minikube cluster]
+    Dev[Developer push] --> Repo[GitHub repo]
+    Repo -->|Argo CD syncs Helm charts| ArgoCD[Argo CD]
+    ArgoCD --> Cluster[Kubernetes cluster]
     Cluster --> Rollouts[Argo Rollouts]
-    Rollouts -->|stable 80%| WebStable["jarvis-web v1 blue"]
-    Rollouts -->|canary 20%| WebCanary["jarvis-web v2 orange"]
+    Rollouts -->|stable traffic| WebStable["jarvis-web stable"]
+    Rollouts -->|canary traffic| WebCanary["jarvis-web canary"]
     Cluster --> Auth[jarvis-auth]
     Cluster --> Notes[jarvis-notes]
-    Cluster --> PG[("Postgres")]
+    Cluster --> PG[(Postgres)]
     Cluster --> Prom[Prometheus]
-    Prom -->|"AnalysisTemplate (success-rate)"| Rollouts
+    Prom -->|AnalysisTemplate success-rate| Rollouts
     Prom --> Graf[Grafana dashboard]
 ```
 
+AWS demo details:
+
+| Item | Value |
+| --- | --- |
+| AWS account | `733717814278` |
+| Region | `us-east-1` |
+| EKS cluster | `jarvis` |
+| App namespace | `jarvis` |
+| Monitoring namespace | `monitoring` |
+| Argo CD namespace | `argocd` |
+| Public app URL | `http://aa180030810ff47df9c684a09112c3fc-c8482971d4afdc73.elb.us-east-1.amazonaws.com` |
+| GitOps repo URL | `https://github.com/logbrass/dev_ops.git` |
+
 ## Prerequisites
 
-- macOS or Linux
-- Docker Desktop (running)
-- `minikube`, `kubectl`, `helm`, `terraform` (Homebrew: `brew install minikube kubectl helm terraform`)
-- Optional: `kubectl argo rollouts` plugin (`brew install argoproj/tap/kubectl-argo-rollouts`) — used by the demo scripts to render the rollout tree
+Local demo:
 
-## Quick start (local demo)
+- macOS or Linux
+- Docker Desktop running
+- `minikube`, `kubectl`, `helm`, `terraform`
+- Optional: `kubectl argo rollouts` plugin
+
+AWS demo:
+
+- AWS access to account `733717814278`
+- `aws`, `kubectl`, `helm`
+- Optional: `kubectl argo rollouts` plugin
+- Runtime secrets created out-of-band with `./scripts/create-aws-secrets.sh`
+
+## Quick start: AWS GitOps demo
+
+The AWS cluster already exists. Do not destroy or recreate it for the demo.
+
+```bash
+aws eks --region us-east-1 update-kubeconfig --name jarvis
+kubectl get nodes
+kubectl -n argocd get applications
+kubectl -n jarvis get rollout,pods,svc,ingress
+kubectl -n monitoring get pods
+kubectl -n monitoring get secret jarvis-postgres-secret
+kubectl -n jarvis get secret jarvis-auth-secret jarvis-notes-secret
+```
+
+Expected Argo CD apps:
+
+```text
+jarvis-root
+jarvis-platform
+jarvis-auth
+jarvis-notes
+jarvis-web
+```
+
+If the child apps are missing, bootstrap the App-of-Apps:
+
+```bash
+kubectl apply -f gitops/apps/root.yaml
+kubectl -n argocd get applications
+```
+
+The repo is public at the time of this demo. If it is made private again, Argo
+CD will need repository credentials configured out-of-band; do not commit
+GitHub tokens or SSH keys.
+
+### AWS rollout targets
+
+Change only `environments/aws/jarvis-web.values.yaml` for the lightweight demo.
+
+| Demo state | `image.tag` | `theme.color` | `theme.name` | `failMode` |
+| --- | --- | --- | --- | --- |
+| Baseline/stable | `v1.0.0` | `#1f6feb` | `blue` | `false` |
+| Successful canary | `v2.0.0` | `#f97316` | `orange` | `false` |
+| Broken canary | `v3.0.0-broken` | `#dc2626` | `red` | `true` |
+
+Commit and push a values change, then watch:
+
+```bash
+kubectl -n argocd get application jarvis-web
+kubectl -n jarvis get rollout jarvis-web-jarvis-web -w
+# or, if installed:
+kubectl argo rollouts get rollout jarvis-web-jarvis-web -n jarvis --watch
+```
+
+Generate traffic during the broken rollout so Prometheus has request data:
+
+```bash
+LB=aa180030810ff47df9c684a09112c3fc-c8482971d4afdc73.elb.us-east-1.amazonaws.com
+while true; do
+  curl -s "http://$LB/" > /dev/null
+  sleep 0.5
+done
+```
+
+For the full operator script, see `DEMO_RUNBOOK.md`.
+
+## Quick start: local demo
 
 ```bash
 # 1. one-time cluster setup (~5 minutes the first time)
@@ -70,37 +170,30 @@ open http://jarvis-web.local
 ./scripts/demo-canary-success.sh
 # refresh the page repeatedly during the rollout and watch it flip colors
 
-# 5. failure-path: v3 is intentionally broken (returns 5xx)
+# 5. failure-path: v3 is intentionally broken (returns 5xx on /)
 ./scripts/demo-canary-rollback.sh
 # watch Argo Rollouts auto-rollback when the AnalysisTemplate trips
 ```
 
-## Demo walkthrough (for the presentation)
+## Demo walkthrough: AWS
 
-1. **Show the values file.** `environments/dev/jarvis-web.values.yaml` is the
-   single source of truth for what's running. Image tag, theme color, replica
-   count — all live here.
-2. **Show a clean cluster.** `kubectl -n jarvis get rollout,svc,ingress`.
-   Open `http://jarvis-web.local` → solid blue.
-3. **Promote to v2.** Run `./scripts/demo-canary-success.sh`. The script edits
-   the values file and `helm upgrade`s — equivalent to what merging a PR
-   would do under full GitOps. The rollout tree appears in the terminal.
-4. **Refresh the browser repeatedly** while the canary is at 20% / 50% / 80%.
-   Roughly that fraction of refreshes serve the orange v2 page; the rest stay
-   blue. Pods can be inspected with `kubectl -n jarvis get pods -L app.kubernetes.io/version`.
-5. **Watch analysis pass** at each step. The `success-rate` AnalysisTemplate
-   queries Prometheus and gates promotion.
-6. **Now promote a broken version.** Run `./scripts/demo-canary-rollback.sh`.
-   v3 has `FAIL_MODE=true` so every request to `/` returns 500.
-7. **Argo Rollouts pauses at 20%, runs analysis, fails it.** The Rollout
-   automatically aborts: traffic returns to the stable revision (which is now
-   v2). No human intervention. `kubectl argo rollouts get rollout jarvis-web-jarvis-web -n jarvis`.
-8. **Show the Grafana dashboard.** Port-forward Grafana
-   (`kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80`),
-   open the "Jarvis Canary" dashboard, point at the spike + recovery.
-9. **Show the Terraform.** `cd infra/terraform && terraform plan`. Same
-   architecture would deploy to AWS (EKS + ECR + VPC) without changing any
-   chart code.
+1. **Show the AWS values file.** `environments/aws/jarvis-web.values.yaml` is
+   the source of truth for the AWS demo's image tag, theme, and `failMode`.
+2. **Show Argo CD is managing the app.** `kubectl -n argocd get applications`
+   should show `jarvis-web` as `Synced` / `Healthy`.
+3. **Show the baseline.** Open the public ELB URL and/or `curl /version`.
+4. **Promote to v2.** Commit `v2.0.0`, orange, `failMode=false`.
+5. **Watch traffic split.** At 20%, most refreshes still show blue and some
+   show orange. That is the intended canary behavior.
+6. **Watch analysis pass.** The `success-rate` AnalysisTemplate queries
+   Prometheus for `http_requests_total` on the stable/canary ServiceMonitor
+   jobs and filters to user traffic on `handler="/"`.
+7. **Promote a broken v3.** Commit `v3.0.0-broken`, red, `failMode=true`, and
+   keep the traffic loop running.
+8. **Watch analysis fail and abort.** The red canary returns HTTP 500 for `/`.
+   Argo Rollouts aborts and keeps traffic on the prior stable ReplicaSet.
+9. **Reset Git.** Rollouts protects traffic but does not revert Git. Push a
+   corrective commit back to `v2.0.0` orange or `v1.0.0` blue.
 
 ## Repo layout
 
@@ -108,70 +201,66 @@ open http://jarvis-web.local
 .
 ├── app/
 │   ├── jarvis-web/              # canary-target FastAPI service (THEME_COLOR/FAIL_MODE)
-│   │   ├── app/main.py
-│   │   ├── tests/test_main.py
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   └── jarvis-backend/          # vendored from cis1912-sp26/jarvis-monorepo
-│       ├── services/auth/       # FastAPI auth service (port 8000)
-│       ├── services/notes/      # FastAPI notes service (port 8001)
-│       └── utilities/           # shared models / pydantic schemas
+│   └── jarvis-backend/          # auth + notes services and shared utilities
 ├── charts/
-│   ├── jarvis-web/              # uses Argo Rollouts Rollout + AnalysisTemplate
-│   │   └── templates/{rollout,service,ingress,servicemonitor,analysis-template}.yaml
+│   ├── jarvis-web/              # Argo Rollouts Rollout + AnalysisTemplate
 │   ├── jarvis-auth/
 │   ├── jarvis-notes/
-│   └── jarvis-platform/         # umbrella for postgresql + kube-prometheus-stack
-├── environments/dev/            # per-env values files (CI bumps image.tag here)
+│   └── jarvis-platform/         # postgresql + kube-prometheus-stack
+├── environments/
+│   ├── dev/                     # local/dev values files
+│   └── aws/                     # AWS values files used by Argo CD demo
 ├── gitops/
 │   ├── apps/                    # Argo CD Application CRs (App-of-Apps)
-│   └── bootstrap/
-├── infra/terraform/             # EKS + ECR + VPC for the AWS deploy target
-├── monitoring/dashboards/       # Grafana dashboard JSON (auto-loaded by sidecar)
-├── scripts/
-│   ├── bootstrap.sh             # one-time cluster setup
-│   ├── install-helm.sh          # deploy apps via Helm directly
-│   ├── install-argocd.sh        # deploy apps via Argo CD GitOps (needs git remote)
-│   ├── demo-canary-success.sh   # v1 -> v2 happy path
-│   ├── demo-canary-rollback.sh  # v3 broken -> auto rollback
-│   └── teardown.sh              # minikube delete
-├── compose.yaml                 # full local-dev stack (no k8s required)
-└── .github/workflows/
-    ├── ci.yml                   # lint, test, build/push images
-    └── promote.yml              # bump environments/dev/*.values.yaml via PR
+│   └── bootstrap/               # controller bootstrap notes/manifests
+├── infra/terraform/             # EKS + ECR + VPC for AWS
+├── monitoring/dashboards/       # Grafana dashboard JSON
+├── scripts/                     # bootstrap, install, secrets, and demo helpers
+├── DEMO_RUNBOOK.md              # AWS canary demo runbook
+├── compose.yaml                 # local-dev stack
+└── .github/workflows/           # CI/promote workflows
 ```
 
 ## Why a small `jarvis-web` instead of canarying the Next.js frontend?
 
-The Next.js app from the Jarvis monorepo is heavy (long build, lots of moving
-parts) and the visual difference between two builds isn't dramatic. A tiny
-~80-line FastAPI service that renders one HTML page from env vars is:
+The Next.js app from the Jarvis monorepo is heavy: long build, many moving
+parts, and visual differences between builds are not dramatic. A tiny FastAPI
+service that renders one HTML page from env vars is:
 
-- **Tiny** — CI loop under a minute.
-- **Visually obvious** — refresh the browser, see a different color.
-- **Naturally observable** — `/metrics` is wired up out of the box, so the
-  AnalysisTemplate's PromQL "just works".
-- **Easy to deliberately break** — `FAIL_MODE=true` flips it from healthy v2
-  to broken v3 with the same image.
+- **Tiny** — fast build/test loop.
+- **Visually obvious** — refresh the browser and see a different color.
+- **Naturally observable** — `/metrics` is wired up, so the AnalysisTemplate's
+  PromQL can gate rollout promotion.
+- **Easy to deliberately break** — `FAIL_MODE=true` makes `/` return HTTP 500
+  while readiness/liveness stay green, letting Prometheus observe canary 5xxs.
 
-The vendored Jarvis services (`auth`, `notes`) are still fully containerized,
-Helm-charted, and GitOps-managed — they prove the pipeline handles real
-microservices. The canary visual just rides on `jarvis-web` for clarity.
+The vendored Jarvis services (`auth`, `notes`) are still containerized,
+Helm-charted, and GitOps-managed. The canary visual rides on `jarvis-web` for
+clarity.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 | --- | --- |
 | `bootstrap.sh` fails on `docker info` | Start Docker Desktop first |
-| `jarvis-web.local` not resolving | `bootstrap.sh` writes to `/etc/hosts`; check the entry exists with `grep jarvis-web /etc/hosts` |
-| Rollout stuck at "Progressing" forever | `kubectl -n jarvis describe rollout jarvis-web-jarvis-web` — usually a missing image; re-run image load |
-| AnalysisRun has no data | Prometheus needs ~30s to scrape; the analysis step has `count: 4` × `interval: 15s` to give it time |
-| `kubectl argo rollouts` not found | `brew install argoproj/tap/kubectl-argo-rollouts` (the demo scripts use it for nicer output) |
+| `jarvis-web.local` not resolving | `bootstrap.sh` writes to `/etc/hosts`; check `grep jarvis-web /etc/hosts` |
+| AWS URL still shows v1 after v2 commit | During canary this is expected. Refresh repeatedly or sample `/version`; traffic starts at 20% canary. Also check `kubectl -n jarvis get rollout jarvis-web-jarvis-web` |
+| Argo CD apps missing | `kubectl apply -f gitops/apps/root.yaml` |
+| Argo CD says `authentication required` | The repo is private or credentials are missing. Add Argo CD repo credentials out-of-band; do not commit tokens |
+| Rollout stuck at `Progressing` forever | `kubectl -n jarvis describe rollout jarvis-web-jarvis-web`; usually missing image, failing readiness, or analysis waiting for data |
+| AnalysisRun has no data | Generate traffic and wait for Prometheus to scrape; use the queries in `DEMO_RUNBOOK.md` |
+| `kubectl argo rollouts` not found | `brew install argoproj/tap/kubectl-argo-rollouts`; plain `kubectl -n jarvis get rollout ... -w` also works |
 
 ## Cleanup
 
+Local cleanup:
+
 ```bash
-./scripts/teardown.sh        # nukes the minikube cluster
+./scripts/teardown.sh        # deletes the minikube cluster
 docker rmi jarvis-web:v1.0.0 jarvis-web:v2.0.0 jarvis-web:v3.0.0-broken \
            jarvis-auth:latest jarvis-notes:latest 2>/dev/null || true
 ```
+
+AWS demo cleanup/reset is a corrective Git commit, not cluster deletion. After
+the broken canary demo, commit the AWS values file back to `v2.0.0` orange or
+`v1.0.0` blue.

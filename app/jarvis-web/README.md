@@ -8,15 +8,17 @@ this service to make canary rollouts visible at a glance:
 | --- | --- | --- | --- | --- | --- |
 | `v1.0.0` | v1.0.0 | `#1f6feb` | blue | `false` | initial stable |
 | `v2.0.0` | v2.0.0 | `#f97316` | orange | `false` | the canary upgrade |
-| `v3.0.0-broken` | v3.0.0 | `#dc2626` | red | `true` | deliberately failing — used to demo auto-rollback |
+| `v3.0.0-broken` | v3.0.0-broken | `#dc2626` | red | `true` | deliberately failing — used to demo auto-rollback |
 
 ## Endpoints
 
-- `GET /` — colored version page
+- `GET /` — colored version page; returns HTTP 500 when `FAIL_MODE=true`
 - `GET /version` — JSON `{version, theme, color}`
-- `GET /healthz` — liveness probe (returns 500 when `FAIL_MODE=true`)
-- `GET /readyz` — readiness probe
+- `GET /healthz` — liveness probe; intentionally always healthy so broken canaries can still emit 5xx traffic metrics
+- `GET /readyz` — readiness probe; intentionally always healthy for the rollback demo
 - `GET /metrics` — Prometheus metrics scraped by Argo Rollouts AnalysisTemplate
+
+The rollback demo relies on application failures from `/`, not failing probes. If probes failed, Kubernetes would stop routing traffic before Prometheus could observe the canary's user-facing 5xx rate.
 
 ## Local run
 

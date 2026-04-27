@@ -33,7 +33,7 @@ kubectl -n argocd get application jarvis-web
 kubectl -n jarvis get rollout jarvis-web-jarvis-web
 ```
 
-If `jarvis-root` shows `authentication required`, configure Argo CD repo credentials out-of-band for the private GitHub repo. Do not put tokens in this repository. After credentials are configured, refresh/sync `jarvis-root` or wait for Argo CD reconciliation.
+The repo is currently public so Argo CD can read it without credentials. If the repo is made private again and `jarvis-root` shows `authentication required`, configure Argo CD repo credentials out-of-band. Do not put tokens in this repository. After credentials are configured, refresh/sync `jarvis-root` or wait for Argo CD reconciliation.
 
 ## Baseline state: v1 blue
 
@@ -118,7 +118,7 @@ Expected behavior:
 
 1. Argo CD syncs the changed Helm values.
 2. Argo Rollouts canaries `20% -> analysis -> 50% -> analysis -> 80% -> promotion`.
-3. The public app becomes orange and reports `v2.0.0`.
+3. During the rollout, repeated refreshes show a mix of blue v1 and orange v2 according to the current canary weight. After promotion, the public app becomes orange and reports `v2.0.0`.
 
 Watch:
 
