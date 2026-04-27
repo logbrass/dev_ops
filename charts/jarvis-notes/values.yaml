@@ -8,10 +8,13 @@ service:
   port: 8001
 
 env:
-  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql.monitoring.svc.cluster.local:5432/jarvis"
   AUTH_SERVICE_URL: "http://jarvis-auth-jarvis-auth:8000"
   FRONTEND_URL: "http://localhost:3000"
   DEBUG: "False"
+
+# Optional Kubernetes Secret whose keys are exposed as environment variables.
+# Use this for real environments so DATABASE_URL does not live in git.
+envFromSecret: ""
 
 resources:
   requests: { cpu: 50m, memory: 128Mi }

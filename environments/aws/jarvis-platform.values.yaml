@@ -1,0 +1,55 @@
+# AWS throwaway-demo platform overrides.
+# This keeps Postgres in-cluster for speed/cost simplicity. For production, use RDS.
+# The Postgres password comes from the jarvis-postgres-secret Kubernetes Secret
+# created by scripts/create-aws-secrets.sh.
+
+postgresql:
+  enabled: true
+  image:
+    repository: bitnamilegacy/postgresql
+  auth:
+    username: jarvis
+    existingSecret: jarvis-postgres-secret
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+      replicationPasswordKey: replication-password
+    database: jarvis
+  primary:
+    persistence:
+      enabled: false
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 1, memory: 1Gi }
+
+kube-prometheus-stack:
+  enabled: true
+  fullnameOverride: kube-prometheus-stack
+  defaultRules:
+    create: false
+  alertmanager:
+    enabled: false
+  prometheus:
+    prometheusSpec:
+      retention: 6h
+      resources:
+        requests: { cpu: 200m, memory: 512Mi }
+        limits:   { cpu: 1, memory: 2Gi }
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+  grafana:
+    # Demo-only. Put this in a Secret too if Grafana is exposed publicly.
+    adminPassword: admin
+    defaultDashboardsEnabled: false
+    sidecar:
+      dashboards:
+        enabled: true
+        searchNamespace: ALL
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits:   { cpu: 500m, memory: 512Mi }
+  nodeExporter:
+    enabled: false
+  kubeStateMetrics:
+    enabled: true

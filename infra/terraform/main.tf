@@ -31,10 +31,12 @@ module "vpc" {
 
   # Required tags so EKS can discover subnets for ELB autoprovisioning.
   public_subnet_tags = {
-    "kubernetes.io/role/elb" = "1"
+    "kubernetes.io/role/elb"                    = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
   private_subnet_tags = {
-    "kubernetes.io/role/internal-elb" = "1"
+    "kubernetes.io/role/internal-elb"           = "1"
+    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
   }
 }
 
@@ -48,15 +50,23 @@ module "eks" {
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
-  cluster_endpoint_public_access = true # tighten this in prod
+  cluster_endpoint_public_access           = true  # tighten this in prod
+  enable_cluster_creator_admin_permissions = false # restricted IAM user cannot call EKS access-entry APIs; bootstrap admin is patched in for this throwaway demo
 
-  # Bundled add-ons we always want.
-  cluster_addons = {
-    coredns            = { most_recent = true }
-    kube-proxy         = { most_recent = true }
-    vpc-cni            = { most_recent = true }
-    aws-ebs-csi-driver = { most_recent = true }
-  }
+  # Keep this throwaway demo compatible with the restricted class AWS IAM user.
+  # The account does not permit KMS key creation/tagging, custom IAM policy
+  # creation, or CloudWatch log-group tag inspection.
+  cluster_enabled_log_types    = []
+  cluster_encryption_config    = {}
+  create_kms_key               = false
+  create_cloudwatch_log_group  = false
+  enable_auto_mode_custom_tags = false
+  enable_irsa                  = false
+
+  # The class AWS user cannot call eks:DescribeAddonVersions/CreateAddon.
+  # EKS still bootstraps the core self-managed add-ons at cluster creation;
+  # Postgres persistence is disabled in AWS values so the EBS CSI add-on is not required.
+  cluster_addons = {}
 
   eks_managed_node_groups = {
     default = {

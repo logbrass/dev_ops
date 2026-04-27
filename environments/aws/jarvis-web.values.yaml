@@ -1,0 +1,24 @@
+# AWS throwaway-demo overrides for jarvis-web.
+# Host is intentionally empty so the ingress responds on the raw AWS ELB DNS name.
+
+image:
+  repository: 733717814278.dkr.ecr.us-east-1.amazonaws.com/jarvis-web
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+theme:
+  color: "#1f6feb"
+  name: blue
+
+failMode: false
+replicaCount: 5
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+  annotations: {}
+
+serviceMonitor:
+  enabled: true
+  interval: 15s

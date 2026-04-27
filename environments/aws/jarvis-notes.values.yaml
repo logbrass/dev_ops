@@ -1,0 +1,17 @@
+# AWS throwaway-demo overrides for jarvis-notes.
+# Secrets are injected from the jarvis-notes-secret Kubernetes Secret created by
+# scripts/create-aws-secrets.sh. Do not put DATABASE_URL here.
+
+image:
+  repository: 733717814278.dkr.ecr.us-east-1.amazonaws.com/jarvis-notes
+  tag: initial
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+envFromSecret: jarvis-notes-secret
+
+env:
+  AUTH_SERVICE_URL: "http://jarvis-auth-jarvis-auth:8000"
+  FRONTEND_URL: "http://"
+  DEBUG: "False"

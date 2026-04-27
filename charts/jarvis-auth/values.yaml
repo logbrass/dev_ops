@@ -8,13 +8,15 @@ service:
   port: 8000
 
 env:
-  DATABASE_URL: "postgresql://jarvis:password@jarvis-platform-postgresql.monitoring.svc.cluster.local:5432/jarvis"
   FRONTEND_URL: "http://localhost:3000"
-  JWT_SECRET_KEY: "a_super_secret_key_for_jwt"
   JWT_ALGORITHM: "HS256"
   ACCESS_TOKEN_EXPIRE_MINUTES: "30"
   DEBUG: "False"
   COOKIE_SECURE: "False"
+
+# Optional Kubernetes Secret whose keys are exposed as environment variables.
+# Use this for real environments so DATABASE_URL/JWT_SECRET_KEY do not live in git.
+envFromSecret: ""
 
 resources:
   requests: { cpu: 50m, memory: 128Mi }

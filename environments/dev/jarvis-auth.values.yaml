@@ -3,3 +3,6 @@ image:
   tag: latest
   pullPolicy: IfNotPresent
 replicaCount: 1
+
+env:
+  JWT_SECRET_KEY: "dev-only-not-a-real-secret"

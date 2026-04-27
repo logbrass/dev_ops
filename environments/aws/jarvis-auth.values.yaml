@@ -1,0 +1,19 @@
+# AWS throwaway-demo overrides for jarvis-auth.
+# Secrets are injected from the jarvis-auth-secret Kubernetes Secret created by
+# scripts/create-aws-secrets.sh. Do not put DATABASE_URL or JWT_SECRET_KEY here.
+
+image:
+  repository: 733717814278.dkr.ecr.us-east-1.amazonaws.com/jarvis-auth
+  tag: initial
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+envFromSecret: jarvis-auth-secret
+
+env:
+  FRONTEND_URL: "http://"
+  JWT_ALGORITHM: "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  DEBUG: "False"
+  COOKIE_SECURE: "False"

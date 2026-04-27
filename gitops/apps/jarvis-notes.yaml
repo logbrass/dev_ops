@@ -8,12 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/cis1912/dev_ops.git
+    repoURL: https://github.com/logbrass/dev_ops.git
     targetRevision: HEAD
     path: charts/jarvis-notes
     helm:
       valueFiles:
-        - ../../environments/dev/jarvis-notes.values.yaml
+        - ../../environments/aws/jarvis-notes.values.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: jarvis

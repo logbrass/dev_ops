@@ -15,10 +15,19 @@ infra/terraform/.terraform/
 infra/terraform/.terraform.lock.hcl
 infra/terraform/*.tfstate
 infra/terraform/*.tfstate.backup
+infra/terraform/terraform.tfstate.*.backup
 infra/terraform/*.tfplan
+
+# Local secrets / env files. Commit example files only.
+.env
+.env.*
+!.env.example
+*.secret.yaml
+*.secrets.yaml
 
 # Editor / OS
 .DS_Store
+pi-session-*.html
 .idea/
 .vscode/
 

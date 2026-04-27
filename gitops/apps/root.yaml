@@ -11,7 +11,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/cis1912/dev_ops.git  # update to your fork
+    repoURL: https://github.com/logbrass/dev_ops.git
     targetRevision: HEAD
     path: gitops/apps
     directory:
