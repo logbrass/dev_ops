@@ -1,6 +1,6 @@
-# jarvis-web Application. The image tag in environments/dev/jarvis-web.values.yaml
-# is what CI bumps to start a canary rollout. Argo CD detects the change,
-# Argo Rollouts handles the progressive delivery + analysis.
+# jarvis-web Application. For the AWS demo, commit changes to
+# environments/aws/jarvis-web.values.yaml to start a canary rollout.
+# Argo CD detects the change; Argo Rollouts handles delivery + analysis.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

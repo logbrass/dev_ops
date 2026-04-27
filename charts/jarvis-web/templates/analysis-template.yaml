@@ -29,12 +29,14 @@ spec:
             sum(rate(
               http_requests_total{
                 job=~"{{ include "jarvis-web.fullname" . }}-(stable|canary)",
+                handler="/",
                 status!~"5.."
               }[1m]
             ))
             /
             sum(rate(
               http_requests_total{
-                job=~"{{ include "jarvis-web.fullname" . }}-(stable|canary)"
+                job=~"{{ include "jarvis-web.fullname" . }}-(stable|canary)",
+                handler="/"
               }[1m]
             ))
