@@ -3,14 +3,14 @@
 
 image:
   repository: 733717814278.dkr.ecr.us-east-1.amazonaws.com/jarvis-web
-  tag: v1.0.0
+  tag: v3.0.0-broken
   pullPolicy: IfNotPresent
 
 theme:
-  color: "#1f6feb"
-  name: blue
+  color: "#dc2626"
+  name: red
 
-failMode: false
+failMode: true
 replicaCount: 5
 
 ingress:
