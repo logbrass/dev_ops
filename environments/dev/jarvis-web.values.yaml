@@ -4,12 +4,12 @@
 
 image:
   repository: jarvis-web
-  tag: v1.0.0
+  tag: v2.0.0
   pullPolicy: IfNotPresent  # use locally-built images loaded into Minikube
 
 theme:
-  color: "#1f6feb"
-  name: blue
+  color: "#f97316"
+  name: orange
 
 failMode: false
 replicaCount: 5

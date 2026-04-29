@@ -1,0 +1,18 @@
+{{/*
+  ServiceMonitor for Argo Rollouts metrics. Argo Rollouts exposes rollout
+  and analysis run metrics on port 8090. This allows the dashboard to show
+  rollout phase, current step, and analysis status.
+*/}}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argo-rollouts
+  labels:
+    {{- include "jarvis-platform.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argo-rollouts
+  endpoints:
+    - port: metrics
+      interval: 10s

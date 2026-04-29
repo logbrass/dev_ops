@@ -44,6 +44,15 @@ else
     --namespace jarvis \
     -f "$VALUES" \
     --force-conflicts
+
+  # If the previous rollout was aborted/degraded (e.g. after the failure demo),
+  # helm upgrade updates the spec but Argo Rollouts won't progress until retried.
+  ROLLOUT_STATUS=$(kubectl get rollout jarvis-web-jarvis-web -n jarvis \
+    -o jsonpath='{.status.phase}' 2>/dev/null || true)
+  if [[ "$ROLLOUT_STATUS" == "Degraded" ]]; then
+    echo "Rollout is in Degraded state — retrying to clear aborted status..."
+    kubectl argo rollouts retry rollout jarvis-web-jarvis-web -n jarvis
+  fi
 fi
 
 echo

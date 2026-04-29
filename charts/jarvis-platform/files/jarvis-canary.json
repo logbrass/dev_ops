@@ -43,17 +43,65 @@
     },
     {
       "type": "stat",
-      "title": "Pods running per version",
-      "id": 3,
-      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 8 },
+      "title": "Rollout Phase",
+      "id": 4,
+      "gridPos": { "h": 4, "w": 8, "x": 0, "y": 14 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
-          "expr": "count by (label_app_kubernetes_io_version) (kube_pod_labels{label_app_kubernetes_io_name=\"jarvis-web\"})",
-          "legendFormat": "{{label_app_kubernetes_io_version}}",
+          "expr": "argorollouts_rollout_info{namespace=\"jarvis\", rollout=\"jarvis-web-jarvis-web\"}",
+          "legendFormat": "{{phase}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "options": {
+                "Healthy": { "color": "green", "index": 0 },
+                "Progressing": { "color": "blue", "index": 1 },
+                "Paused": { "color": "orange", "index": 2 },
+                "Degraded": { "color": "red", "index": 3 }
+              },
+              "type": "value"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Current Step",
+      "id": 5,
+      "gridPos": { "h": 4, "w": 8, "x": 8, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "argorollouts_rollout_info{namespace=\"jarvis\", rollout=\"jarvis-web-jarvis-web\"}",
+          "legendFormat": "{{step_index}}",
           "refId": "A"
         }
       ]
+    },
+    {
+      "type": "table",
+      "title": "Analysis Runs",
+      "id": 6,
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 14 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "expr": "argorollouts_analysis_run_info{namespace=\"jarvis\"}",
+          "legendFormat": "{{analysisrun}} - {{phase}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "displayMode": "table"
+          }
+        }
+      }
     }
-  ]
-}

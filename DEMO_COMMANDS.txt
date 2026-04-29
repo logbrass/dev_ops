@@ -1,0 +1,77 @@
+# Jarvis Demo Commands - Screen Recording Script
+# Keep this open while recording
+
+## Quick Setup
+Open these terminals:
+- kubectl get rollout jarvis-web-jarvis-web -n jarvis -w
+- kubectl get pods -n jarvis -w
+- kubectl logs -f deployment/jarvis-web-jarvis-web -n jarvis
+
+Open browsers:
+- http://jarvis-web.local:8080 (the app)
+- http://localhost:3000 (grafana - admin/admin)
+
+Check current state:
+curl -s http://jarvis-web.local:8080 | grep "v1.0.0"  # should be blue
+
+---
+
+## Demo 1: Happy Canary (Blue to Orange)
+Run: ./scripts/demo-canary-success.sh
+
+What it does:
+- Changes values.yaml to v2.0.0 orange
+- Helm upgrades the app
+- Rollout: 20% canary -> check metrics -> 50% -> check -> 80% -> 100%
+
+Watch:
+- Terminal 1: rollout phases change
+- Terminal 2: new pods spin up, old ones die
+
+Browser refreshes:
+- Start: v1.0.0 blue
+- Middle: mix of blue/orange
+- End: v2.0.0 orange everywhere
+
+Dashboard: shows successful analysis runs
+
+Takes: ~3-5 min
+
+---
+
+## Demo 2: Auto Rollback (Orange to Red, back to Orange)
+Run: ./scripts/demo-canary-rollback.sh
+
+What it does:
+- Changes to v3.0.0-broken red (failMode=true)
+- Deploys broken version
+- Rollout starts -> analysis fails -> auto rollback
+
+Watch:
+- Terminal 1: phase goes degraded then healthy
+- Terminal 2: red pods appear then vanish, orange comes back
+- Terminal 3: 500 errors in logs
+
+Browser:
+- Start: v2.0.0 orange
+- During: might see red briefly
+- After: back to orange
+
+Dashboard: shows failed analysis, rollback
+
+Takes: ~5-7 min
+
+---
+
+## If stuck
+Check: kubectl describe rollout jarvis-web-jarvis-web -n jarvis
+Check: kubectl get analysisrun -n jarvis
+Fix: ./scripts/install-helm.sh
+
+---
+
+## What to say
+- "Argo Rollouts does progressive delivery"
+- "Canary checks success rates with Prometheus"
+- "Bad metrics = auto rollback"
+- "Traffic splits via ingress services"
